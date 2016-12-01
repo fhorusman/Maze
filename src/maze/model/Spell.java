@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package maze;
+package maze.model;
 
 import maze.sprite.MovingSprite;
 
@@ -16,11 +16,13 @@ public class Spell {
     private String name;
     private float attackPower;
     private MovingSprite sprite;
+    private Character owner;
 
-    public Spell(String name, float attackPower, MovingSprite sprite) {
+    public Spell(String name, float attackPower, MovingSprite sprite, Character owner) {
         this.name = name;
         this.attackPower = attackPower;
         this.sprite = sprite;
+        this.owner = owner;
     }
 
     public String getName() {
@@ -45,5 +47,13 @@ public class Spell {
 
     public void setSprite(MovingSprite sprite) {
         this.sprite = sprite;
+    }
+    
+    public Character getOwner() {
+        return owner;
+    }
+    
+    public void setOwner(Character owner) {
+        this.owner = owner;
     }
 }

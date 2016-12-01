@@ -6,6 +6,7 @@
 
 package maze;
 
+import maze.model.Character;
 import java.util.List;
 import maze.sprite.MovingSprite;
 

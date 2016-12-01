@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package maze;
+package maze.model;
 
 import maze.sprite.MovingSprite;
 
@@ -66,7 +66,9 @@ public class Character {
     
     public void levelUp() {
         setCurrLevel(getCurrLevel() + 1);
+        System.out.println("Level UP to " + getCurrLevel() + "!!!");
         calculateCurrStatus();
+        nextLevelExp = Math.round((currAgility + currIntelligence + currStrength + currExpValue) * currLevel);
     }
 
     private void calculateCurrStatus() {
@@ -237,5 +239,14 @@ public class Character {
     
     public void setNextLevelExp(int nextLevelExp) {
         this.nextLevelExp = nextLevelExp;
+    }
+    
+    public void receiveExp(int exp) {
+        System.out.println("Receive " + exp + " exp.");
+        System.out.println("CurrExp: " + currExpValue + ", nextExp: " + nextLevelExp);
+        this.currExpValue += exp;
+        if(currExpValue > nextLevelExp) {
+            levelUp();
+        }
     }
 }
