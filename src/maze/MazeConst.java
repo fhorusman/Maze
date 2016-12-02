@@ -69,4 +69,16 @@ public class MazeConst {
         }
         return DIRECTIONS;
     }
+    
+    public static String toString(int direction) {
+        switch(direction) {
+            case N: return "North";
+            case S: return "South";
+            case E: return "East";
+            case W: return "West";
+            case U: return "Up";
+            case D: return "Down";
+            default: return "Unknown";
+        }
+    }
 }

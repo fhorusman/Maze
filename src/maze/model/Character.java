@@ -14,12 +14,12 @@ import maze.sprite.MovingSprite;
  */
 public class Character {
     private String name;
+    
     private float baseHealth;
     private float baseMana;
     private float baseStrength;
     private float baseAgility;
     private float baseIntelligence;
-    private int nextLevelExp;
     private int baseExpValue;
     
     private float addHealth;
@@ -36,25 +36,47 @@ public class Character {
     private float currStrength;
     private float currAgility;
     private float currIntelligence;
-    private int currLevel;
+    private int currLevel = 1;
     private int currExpValue;
+    private int currNextLevelExp;
     
     private MovingSprite sprite;
 
-    public Character(String name, float health, float mana, float strength, float agility, float intelligence, int exp, MovingSprite sprite) {
+    /**
+     * Initialize Character with the current status
+     * @param name
+     * @param level
+     * @param health
+     * @param mana
+     * @param strength
+     * @param agility
+     * @param intelligence
+     * @param exp
+     * @param sprite 
+     */
+    public Character(String name, int level, float health, float mana, float strength, float agility, float intelligence, int exp, MovingSprite sprite) {
         this.name = name;
-        this.baseHealth = health;
+        this.currLevel = level;
         this.currHealth = health;
-        this.baseMana = mana;
+        this.currMaxHealth = health;
         this.currMana = mana;
-        this.baseStrength = strength;
-        this.baseAgility = agility;
-        this.baseIntelligence = intelligence;
-        this.baseExpValue = exp;
-        levelUp();
+        this.currMaxMana = mana;
+        this.currStrength = strength;
+        this.currAgility = agility;
+        this.currIntelligence = intelligence;
+        this.currExpValue = exp;
         this.sprite = sprite;
     }
     
+    /**
+     * Set the status gain for each level
+     * @param health
+     * @param mana
+     * @param strength
+     * @param agility
+     * @param intelligence
+     * @param exp 
+     */
     public void setPotentials(float health, float mana, float strength, float agility, float intelligence, int exp) {
         this.addHealth = health;
         this.addMana = mana;
@@ -64,20 +86,22 @@ public class Character {
         this.addExpValue = exp;
     }
     
-    public void levelUp() {
-        setCurrLevel(getCurrLevel() + 1);
-        System.out.println("Level UP to " + getCurrLevel() + "!!!");
-        calculateCurrStatus();
-        nextLevelExp = Math.round((currAgility + currIntelligence + currStrength + currExpValue) * currLevel);
-    }
-
-    private void calculateCurrStatus() {
-        this.currMaxHealth = getBaseHealth() + (getCurrLevel() * getAddHealth());
-        this.currMaxMana = getBaseMana() + (getCurrLevel() * getAddMana());
-        this.currStrength = getBaseStrength() + (getCurrLevel() * getAddStrength());
-        this.currAgility = getBaseAgility() + (getCurrLevel() * getAddAgility());
-        this.currIntelligence = getBaseIntelligence() + (getCurrLevel() * getAddIntelligence());
-        this.currExpValue = getBaseExpValue() + (getCurrLevel() * getAddExpValue());
+    /**
+     * Set the character status on level 1
+     * @param health
+     * @param mana
+     * @param strength
+     * @param agility
+     * @param intelligence
+     * @param exp 
+     */
+    public void setBaseValue(float health, float mana, float strength, float agility, float intelligence, int exp) {
+        this.baseHealth = health;
+        this.baseMana = mana;
+        this.baseStrength = strength;
+        this.baseAgility = agility;
+        this.baseIntelligence = intelligence;
+        this.baseExpValue = exp;
     }
 
     public String getName() {
@@ -86,54 +110,6 @@ public class Character {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public float getHealth() {
-        return getBaseHealth();
-    }
-
-    public void setHealth(float health) {
-        this.baseHealth = health;
-    }
-
-    public float getMana() {
-        return getBaseMana();
-    }
-
-    public void setMana(float mana) {
-        this.baseMana = mana;
-    }
-
-    public float getStrength() {
-        return getBaseStrength();
-    }
-
-    public void setStrength(float strength) {
-        this.baseStrength = strength;
-    }
-
-    public float getAgility() {
-        return getBaseAgility();
-    }
-
-    public void setAgility(float agility) {
-        this.baseAgility = agility;
-    }
-
-    public float getIntelligence() {
-        return getBaseIntelligence();
-    }
-
-    public void setIntelligence(float intelligence) {
-        this.baseIntelligence = intelligence;
-    }
-
-    public MovingSprite getSprite() {
-        return sprite;
-    }
-
-    public void setSprite(MovingSprite sprite) {
-        this.sprite = sprite;
     }
 
     public float getBaseHealth() {
@@ -154,10 +130,6 @@ public class Character {
 
     public float getBaseIntelligence() {
         return baseIntelligence;
-    }
-
-    public int getNextLevelExp() {
-        return nextLevelExp;
     }
 
     public int getBaseExpValue() {
@@ -196,20 +168,12 @@ public class Character {
         return currHealth;
     }
 
-    public void setCurrHealth(float currHealth) {
-        this.currHealth = currHealth;
-    }
-
     public float getCurrMaxMana() {
         return currMaxMana;
     }
 
     public float getCurrMana() {
         return currMana;
-    }
-
-    public void setCurrMana(float currMana) {
-        this.currMana = currMana;
     }
 
     public float getCurrStrength() {
@@ -228,25 +192,59 @@ public class Character {
         return currLevel;
     }
 
-    public void setCurrLevel(int currLevel) {
-        this.currLevel = currLevel;
-        calculateCurrStatus();
-    }
-
     public int getCurrExpValue() {
         return currExpValue;
     }
-    
-    public void setNextLevelExp(int nextLevelExp) {
-        this.nextLevelExp = nextLevelExp;
+
+    public MovingSprite getSprite() {
+        return sprite;
     }
-    
-    public void receiveExp(int exp) {
-        System.out.println("Receive " + exp + " exp.");
-        System.out.println("CurrExp: " + currExpValue + ", nextExp: " + nextLevelExp);
-        this.currExpValue += exp;
-        if(currExpValue > nextLevelExp) {
-            levelUp();
-        }
+
+    public void setCurrMaxHealth(float currMaxHealth) {
+        this.currMaxHealth = currMaxHealth;
+    }
+
+    public void setCurrHealth(float currHealth) {
+        this.currHealth = currHealth;
+    }
+
+    public void setCurrMaxMana(float currMaxMana) {
+        this.currMaxMana = currMaxMana;
+    }
+
+    public void setCurrMana(float currMana) {
+        this.currMana = currMana;
+    }
+
+    public void setCurrStrength(float currStrength) {
+        this.currStrength = currStrength;
+    }
+
+    public void setCurrAgility(float currAgility) {
+        this.currAgility = currAgility;
+    }
+
+    public void setCurrIntelligence(float currIntelligence) {
+        this.currIntelligence = currIntelligence;
+    }
+
+    public void setCurrLevel(int currLevel) {
+        this.currLevel = currLevel;
+    }
+
+    public void setCurrExpValue(int currExpValue) {
+        this.currExpValue = currExpValue;
+    }
+
+    public void setSprite(MovingSprite sprite) {
+        this.sprite = sprite;
+    }
+
+    public int getCurrNextLevelExp() {
+        return currNextLevelExp;
+    }
+
+    public void setCurrNextLevelExp(int currNextLevelExp) {
+        this.currNextLevelExp = currNextLevelExp;
     }
 }

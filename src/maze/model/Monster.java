@@ -13,8 +13,13 @@ import maze.sprite.MovingSprite;
  */
 public class Monster extends Character {
     private boolean pcSeen;
-    public Monster(String name, float health, float mana, float strength, float agility, float intelligence, int exp, MovingSprite sprite) {
-        super(name, health, mana, strength, agility, intelligence, exp, sprite);
+    public Monster(String name, MovingSprite sprite, MonsterType type) {
+        super(name, 1, type.getBaseHealth(), type.getBaseMana(), type.getBaseStrength(), 
+                type.getBaseAgility(), type.getBaseIntelligence(), type.getBaseExpValue(), sprite);
+    }
+    
+    public Monster(String name, int level, float health, float mana, float strength, float agility, float intelligence, int exp, MovingSprite sprite) {
+        super(name, level, health, mana, strength, agility, intelligence, exp, sprite);
     }
     
     public boolean hasSeenPc() {
