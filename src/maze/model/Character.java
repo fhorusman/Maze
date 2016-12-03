@@ -39,6 +39,7 @@ public class Character {
     private int currLevel = 1;
     private int currExpValue;
     private int currNextLevelExp;
+    private int currExp;
     
     private MovingSprite sprite;
 
@@ -66,6 +67,7 @@ public class Character {
         this.currIntelligence = intelligence;
         this.currExpValue = exp;
         this.sprite = sprite;
+        currExp = 0;
     }
     
     /**
@@ -246,5 +248,13 @@ public class Character {
 
     public void setCurrNextLevelExp(int currNextLevelExp) {
         this.currNextLevelExp = currNextLevelExp;
+    }
+
+    public int getCurrExp() {
+        return currExp;
+    }
+
+    public void setCurrExp(int currExp) {
+        this.currExp = currExp;
     }
 }

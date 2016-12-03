@@ -94,7 +94,11 @@ public class MovingSprite extends Sprite {
         this.targetY = targetY;
     }
 
-    public float getMovementX() {
+    public float getCenteredMovementX() {
+        return movementX + (MazeConst.TILE_WIDTH - spriteWidth) / 2;
+    }
+
+    public float getTrueMovementX() {
         return movementX;
     }
 
@@ -102,7 +106,11 @@ public class MovingSprite extends Sprite {
         this.movementX = movementX;
     }
 
-    public float getMovementY() {
+    public float getCenteredMovementY() {
+        return movementY + (MazeConst.TILE_HEIGHT - spriteHeight) / 2;
+    }
+
+    public float getTrueMovementY() {
         return movementY;
     }
 
@@ -153,10 +161,10 @@ public class MovingSprite extends Sprite {
                 movementX = x * MazeConst.TILE_WIDTH + movement;
                 /*
                 System.out.println("==========================================");
-                System.out.println("x         = " + x);
+                System.out.println("x         = " + x + "(" + (x * MazeConst.TILE_WIDTH) + "," + ((x+1) * MazeConst.TILE_WIDTH) + ")");
                 System.out.println("targetX   = " + targetX);
                 System.out.println("movement  = " + movement);
-                System.out.println("movementX = " + movementX);
+                System.out.println("movementX = " + getCenteredMovementX() + "(" + getCenteredMovementX() + "," + (getCenteredMovementX() + spriteWidth) + ")");
                 System.out.println("==========================================");
 //                */
             } 
@@ -165,34 +173,39 @@ public class MovingSprite extends Sprite {
                 movementY = y * MazeConst.TILE_HEIGHT + movement;
                 /*
                 System.out.println("==========================================");
-                System.out.println("y         = " + y);
+                System.out.println("y         = " + y + "(" + (y * MazeConst.TILE_HEIGHT) + "," + ((y+1) * MazeConst.TILE_HEIGHT) + ")");
                 System.out.println("targetY   = " + targetY);
                 System.out.println("movement  = " + movement);
-                System.out.println("movementY = " + movementY);
+                System.out.println("movementY = " + getCenteredMovementY() + "(" + getCenteredMovementY() + "," + (getCenteredMovementY() + spriteHeight) + ")");
                 System.out.println("==========================================");
 //                */
             }
         }
     }
+
+    public int getMovementYTile() {
+        int movementYInTile = (int) getCenteredMovementY() / MazeConst.TILE_HEIGHT;
+        return movementYInTile;
+//        return Math.round(getCenteredMovementY() / MazeConst.TILE_HEIGHT);
+    }
+
+    public int getMovementXTile() {
+        int movementXInTile = (int) getCenteredMovementX() / MazeConst.TILE_WIDTH;
+        return movementXInTile;
+//        return Math.round(getCenteredMovementX() / MazeConst.TILE_WIDTH);
+    }
     
     public boolean isSpriteInTile(int x, int y) {
         // build the square coordinate of pixel. As long as the sprite exist in
         // the tile, return true;
-        int leftXpx = x * 32, rightXpx = (x + 1) * 32;
-        int upYpx = y * 32, downYpx = (y + 1) * 32;
-        boolean isTileXOK = movementX + spriteWidth >= leftXpx && movementX + spriteWidth <= rightXpx;
-        boolean isTileYOK = movementY + spriteHeight >= upYpx && movementY + spriteHeight <= downYpx;
+        int leftXpx = x * MazeConst.TILE_WIDTH, rightXpx = (x + 1) * MazeConst.TILE_WIDTH;
+        int upYpx = y * MazeConst.TILE_HEIGHT, downYpx = (y + 1) * MazeConst.TILE_HEIGHT;
+//        boolean isTileXOK = movementX + spriteWidth >= leftXpx && movementX + spriteWidth <= rightXpx;
+//        boolean isTileYOK = movementY + spriteHeight >= upYpx && movementY + spriteHeight <= downYpx;
+        boolean isTileXOK = getCenteredMovementX() >= leftXpx && getCenteredMovementX() + spriteWidth <= rightXpx;
+        boolean isTileYOK = getCenteredMovementY() >= upYpx && getCenteredMovementY() + spriteHeight <= downYpx;
+//        System.out.println("IsSpriteInTile:" + (isTileXOK && isTileYOK));
         return isTileXOK && isTileYOK;
-//        boolean isInTile = movementX >= x * MazeConst.TILE_WIDTH && movementX <= (x + 1) * MazeConst.TILE_WIDTH &&
-//                movementY >= y * MazeConst.TILE_HEIGHT && movementY <= (y + 1) * MazeConst.TILE_HEIGHT;
-//        boolean isInNextTile = x == targetX && y == targetY;
-//        boolean isInPrevTile = x == previousX && y == previousY;
-////        if(isInTile){
-////            System.out.println(new Date().getTime() + "-----" + x + "----" + y + "-------");
-////            System.out.println("Monster: isInTile: " + isInTile);
-////            printCoordinates();
-////        }
-//        return isInTile || isInNextTile || isInPrevTile;
     }
     
     public void printCoordinates() {
