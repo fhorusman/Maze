@@ -21,6 +21,8 @@ public class Floor {
     private int floorNumber;
     private long seed;
     private List<Character> characterSprites;
+    private boolean canGoUp;
+    private boolean canGoDown;
 
     public List<Character> getCharacterSprites() {
         return characterSprites;
@@ -68,6 +70,22 @@ public class Floor {
 
     public void setEventGrid(int[][] eventGrid) {
         this.eventGrid = eventGrid;
+    }
+
+    public boolean isCanGoUp() {
+        return canGoUp;
+    }
+
+    public void setCanGoUp(boolean canGoUp) {
+        this.canGoUp = canGoUp;
+    }
+
+    public boolean isCanGoDown() {
+        return canGoDown;
+    }
+
+    public void setCanGoDown(boolean canGoDown) {
+        this.canGoDown = canGoDown;
     }
     
     public void seenObservableGridFromCoords(int x, int y, int fromDirection) {

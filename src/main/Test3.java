@@ -23,10 +23,10 @@ import org.lwjgl.opengl.DisplayMode;
  * @author jediTofu
  * @see <a href="http://lwjgl.org/">LWJGL Home Page</a>
  */
-public class Main {
+public class Test3 {
   public static final int DISPLAY_HEIGHT = 480;
   public static final int DISPLAY_WIDTH = 640;
-  public static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+  public static final Logger LOGGER = Logger.getLogger(Test3.class.getName());
 
   private int squareSize;
   private int squareX;
@@ -43,7 +43,7 @@ public class Main {
   }
 
   public static void main(String[] args) {
-    Main main = null;
+    Test3 main = null;
     try {
       System.out.println("Keys:");
       System.out.println("down  - Shrink");
@@ -51,7 +51,7 @@ public class Main {
       System.out.println("left  - Rotate left");
       System.out.println("right - Rotate right");
       System.out.println("esc   - Exit");
-      main = new Main();
+      main = new Test3();
       main.create();
       main.run();
     }
@@ -65,7 +65,7 @@ public class Main {
     }
   }
 
-  public Main() {
+  public Test3() {
     squareSize = 100;
     squareX = 0;
     squareY = 0;
