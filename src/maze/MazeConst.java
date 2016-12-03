@@ -55,7 +55,7 @@ public class MazeConst {
             case W: return E;
             case U: return D;
             case D: return U;
-            default: return -1;
+            default: return 0;
         }
     }
     

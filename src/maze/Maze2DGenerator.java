@@ -19,14 +19,19 @@ import java.util.Random;
  */
 public class Maze2DGenerator {
     private Random rand;
+    private final static Maze2DGenerator instance = new Maze2DGenerator();
     
     // Constants
     private Map<Integer, Integer> DX = new HashMap();
     private Map<Integer, Integer> DY = new HashMap();
     
-    public Maze2DGenerator() {
+    private Maze2DGenerator() {
         rand = new Random();
         setHashMap();
+    }
+    
+    public static Maze2DGenerator getInstance() {
+        return instance;
     }
     
     public Map<Integer, Integer> getDX() {
