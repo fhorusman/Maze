@@ -8,7 +8,7 @@ package maze;
 
 import maze.model.Character;
 import java.util.List;
-import maze.sprite.MovingSprite;
+import maze.model.AttackEvent;
 
 /**
  *
@@ -19,10 +19,15 @@ public class Floor {
     private int[][] visitedGrid;
     private int[][] eventGrid;
     private int floorNumber;
+    private int width;
+    private int height;
     private long seed;
     private List<Character> characterSprites;
+    private List<AttackEvent> attackingMonster;
+    private List<AttackEvent> attackingCharacter;
     private boolean canGoUp;
     private boolean canGoDown;
+    private MazeGenerator generator;
 
     public List<Character> getCharacterSprites() {
         return characterSprites;
@@ -110,5 +115,54 @@ public class Floor {
             count++;
             getVisitedGrid()[y-count][x] |= MazeConst.SEEN;
         }
+    }
+
+    public MazeGenerator getGenerator() {
+        return generator;
+    }
+
+    public void setGenerator(MazeGenerator generator) {
+        this.generator = generator;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+    
+    public Character getCharAt(int x, int y) {
+        for(Character chara : getCharacterSprites()) {
+            if(chara.getX() == x && chara.getY() == y) {
+                return chara;
+            }
+        }
+        return null;
+    }
+
+    public List<AttackEvent> getAttackingMonster() {
+        return attackingMonster;
+    }
+
+    public void setAttackingMonster(List<AttackEvent> attackingMonster) {
+        this.attackingMonster = attackingMonster;
+    }
+
+    public List<AttackEvent> getAttackingCharacter() {
+        return attackingCharacter;
+    }
+
+    public void setAttackingCharacter(List<AttackEvent> attackingCharacter) {
+        this.attackingCharacter = attackingCharacter;
     }
 }

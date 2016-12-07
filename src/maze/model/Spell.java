@@ -15,12 +15,14 @@ import maze.sprite.MovingSprite;
 public class Spell {
     private String name;
     private float attackPower;
+    private float manaCost;
     private MovingSprite sprite;
     private Character owner;
 
-    public Spell(String name, float attackPower, MovingSprite sprite, Character owner) {
+    public Spell(String name, float attackPower, float manaCost, MovingSprite sprite, Character owner) {
         this.name = name;
         this.attackPower = attackPower;
+        this.manaCost = manaCost;
         this.sprite = sprite;
         this.owner = owner;
     }
@@ -55,5 +57,13 @@ public class Spell {
     
     public void setOwner(Character owner) {
         this.owner = owner;
+    }
+
+    public float getManaCost() {
+        return manaCost;
+    }
+
+    public void setManaCost(float manaCost) {
+        this.manaCost = manaCost;
     }
 }

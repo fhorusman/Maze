@@ -132,7 +132,7 @@ public class MovingSprite extends Sprite {
         if((spriteDirection & DIRECTION) == spriteDirection || 
                 (spriteDirection & MazeConst.OPPOSITE_OF(DIRECTION)) == spriteDirection) {
             
-        } else {
+        } else if (isAutomaticTurnEnabled()) {
             int temp = spriteHeight;
             spriteHeight = spriteWidth;
             spriteWidth = temp;

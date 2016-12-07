@@ -8,22 +8,15 @@ package maze;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 /**
  * Create a 2D Maze that has no upstairs or downstairs.
  * @author Fhorusman <fhorusman@gmail.com>
  */
-public class Maze2DGenerator {
-    private Random rand;
+public class Maze2DGenerator extends MazeGenerator {
     private final static Maze2DGenerator instance = new Maze2DGenerator();
-    
-    // Constants
-    private Map<Integer, Integer> DX = new HashMap();
-    private Map<Integer, Integer> DY = new HashMap();
     
     private Maze2DGenerator() {
         rand = new Random();
@@ -32,14 +25,6 @@ public class Maze2DGenerator {
     
     public static Maze2DGenerator getInstance() {
         return instance;
-    }
-    
-    public Map<Integer, Integer> getDX() {
-        return DX;
-    }
-    
-    public Map<Integer, Integer> getDY() {
-        return DY;
     }
     
     private void setHashMap() {
@@ -53,6 +38,7 @@ public class Maze2DGenerator {
         DY.put(MazeConst.E, 0);
         DY.put(MazeConst.W, 0);
     }
+    
     int counter = 0;
     public void carvePassages(int cx, int cy, int[][] grid) {
         List<Integer> thisDirection = new ArrayList<>();

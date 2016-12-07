@@ -6,104 +6,30 @@
 
 package maze.model;
 
+import maze.Floor;
+import maze.MazeConst;
 import maze.sprite.MovingSprite;
+import maze.sprite.Tile;
 
 /**
  *
  * @author Fhorusman <fhorusman@gmail.com>
  */
-public class Character {
+public class Character extends MovingSprite {
     private String name;
+    private boolean pcSeen;
     
-    private float baseHealth;
-    private float baseMana;
-    private float baseStrength;
-    private float baseAgility;
-    private float baseIntelligence;
-    private int baseExpValue;
-    
-    private float addHealth;
-    private float addMana;
-    private float addStrength;
-    private float addAgility;
-    private float addIntelligence;
-    private int addExpValue;
-    
-    private float currMaxHealth;
-    private float currHealth;
-    private float currMaxMana;
-    private float currMana;
-    private float currStrength;
-    private float currAgility;
-    private float currIntelligence;
-    private int currLevel = 1;
-    private int currExpValue;
-    private int currNextLevelExp;
-    private int currExp;
-    
-    private MovingSprite sprite;
+    private Character target;
+    private Fighter fighter;
+    private AI ai;
 
     /**
      * Initialize Character with the current status
-     * @param name
-     * @param level
-     * @param health
-     * @param mana
-     * @param strength
-     * @param agility
-     * @param intelligence
-     * @param exp
-     * @param sprite 
      */
-    public Character(String name, int level, float health, float mana, float strength, float agility, float intelligence, int exp, MovingSprite sprite) {
+    public Character(Tile tile, int x, int y, String name, Fighter fighter) {
+        super(tile, x, y);
         this.name = name;
-        this.currLevel = level;
-        this.currHealth = health;
-        this.currMaxHealth = health;
-        this.currMana = mana;
-        this.currMaxMana = mana;
-        this.currStrength = strength;
-        this.currAgility = agility;
-        this.currIntelligence = intelligence;
-        this.currExpValue = exp;
-        this.sprite = sprite;
-        currExp = 0;
-    }
-    
-    /**
-     * Set the status gain for each level
-     * @param health
-     * @param mana
-     * @param strength
-     * @param agility
-     * @param intelligence
-     * @param exp 
-     */
-    public void setPotentials(float health, float mana, float strength, float agility, float intelligence, int exp) {
-        this.addHealth = health;
-        this.addMana = mana;
-        this.addStrength = strength;
-        this.addAgility = agility;
-        this.addIntelligence = intelligence;
-        this.addExpValue = exp;
-    }
-    
-    /**
-     * Set the character status on level 1
-     * @param health
-     * @param mana
-     * @param strength
-     * @param agility
-     * @param intelligence
-     * @param exp 
-     */
-    public void setBaseValue(float health, float mana, float strength, float agility, float intelligence, int exp) {
-        this.baseHealth = health;
-        this.baseMana = mana;
-        this.baseStrength = strength;
-        this.baseAgility = agility;
-        this.baseIntelligence = intelligence;
-        this.baseExpValue = exp;
+        this.fighter = fighter;
     }
 
     public String getName() {
@@ -114,147 +40,125 @@ public class Character {
         this.name = name;
     }
 
-    public float getBaseHealth() {
-        return baseHealth;
+    public Character getTarget() {
+        return target;
     }
 
-    public float getBaseMana() {
-        return baseMana;
+    public void setTarget(Character target) {
+        this.target = target;
     }
 
-    public float getBaseStrength() {
-        return baseStrength;
+    public Fighter getFighter() {
+        return fighter;
     }
 
-    public float getBaseAgility() {
-        return baseAgility;
+    public void setFighter(Fighter fighter) {
+        this.fighter = fighter;
     }
 
-    public float getBaseIntelligence() {
-        return baseIntelligence;
+    public AI getAi() {
+        return ai;
     }
 
-    public int getBaseExpValue() {
-        return baseExpValue;
+    public void setAi(AI ai) {
+        this.ai = ai;
     }
-
-    public float getAddHealth() {
-        return addHealth;
+    
+    public boolean hasSeenPc() {
+        return pcSeen;
     }
-
-    public float getAddMana() {
-        return addMana;
+    
+    public void setPcSeen(boolean pcSeen) {
+        this.pcSeen = pcSeen;
     }
-
-    public float getAddStrength() {
-        return addStrength;
+    
+    /**
+     * Move character to the specified block. 
+     * @param targetX
+     * @param targetY
+     * @param f
+     * @return 
+     */
+    public boolean moveToward(int targetX, int targetY, Floor f) {
+        int bestDirection = getSpriteDirection();
+        int bestMD = f.getWidth() + f.getHeight();
+        int bestX = 0, bestY = 0;
+        for(Integer nextDirection : MazeConst.getDIRECTIONS()) {
+            if((f.getGrid()[getY()][getX()] & nextDirection) != 0) {
+                int nextX = getX() + f.getGenerator().getDX().get(nextDirection);
+                int nextY = getY() + f.getGenerator().getDY().get(nextDirection);
+                
+                int nextMD = MazeConst.getMD(nextX, nextY, targetX, targetY);
+                if(nextMD == 0 && (f.getVisitedGrid()[bestY][bestX] & MazeConst.UNPASSABLE) == 0) {
+                    bestDirection = nextDirection;
+                    bestMD = nextMD;
+                    bestX = nextX;
+                    bestY = nextY;
+                    break;
+                } else {
+                    nextMD = findBestDirectionMD(nextX, nextY, getX(), getY(), targetX, targetY, f, 0);
+//                    System.out.println("moveToward-> toward: " + MazeConst.toString(nextDirection) + ", nextMD: " + nextMD + ", nextX: " + nextX + 
+//                            ", nextY: " + nextY + ", targetX: " + targetX + ", targetY: " + targetY);
+                    if(nextMD < bestMD) {
+                        bestDirection = nextDirection;
+                        bestMD = nextMD;
+                        bestX = nextX;
+                        bestY = nextY;
+                    }
+                }
+            }
+        }
+        if((f.getVisitedGrid()[bestY][bestX] & MazeConst.UNPASSABLE) == MazeConst.UNPASSABLE) {
+//            System.out.println("UNPASSABLE");
+        } else {
+//            System.out.println("move toward " + bestX + "," + bestY);
+            // make the current coordinate passable for other character
+            f.getVisitedGrid()[getY()][getX()] ^= MazeConst.UNPASSABLE;
+            // move the monster to another coordinate.
+            moveSprite(bestX, bestY);
+            turnSprite(bestDirection);
+            // make the target coordinate as unpassable for other character.
+            f.getVisitedGrid()[bestY][bestX] ^= MazeConst.UNPASSABLE;
+            return true;
+        }
+        return false;
     }
+    
+    private int findBestDirectionMD(int currX, int currY, int prevX, int prevY, int targetX, int targetY, Floor f, int loop) {
+//        System.out.println("findBestDirection " + currX + "," + currY);
+        int[] nextDirections = new int[MazeConst.getDIRECTIONS().size()];
+        int counter = 0, bestMD = f.getWidth() + f.getHeight();
+        for(Integer nextDirection : MazeConst.getDIRECTIONS()) {
+            if((f.getGrid()[currY][currX] & nextDirection) != 0) {
+                int nextX = currX + f.getGenerator().getDX().get(nextDirection);
+                int nextY = currY + f.getGenerator().getDY().get(nextDirection);
+                
+                if(nextX == prevX && nextY == prevY) {
+                    continue;
+                }
 
-    public float getAddAgility() {
-        return addAgility;
-    }
-
-    public float getAddIntelligence() {
-        return addIntelligence;
-    }
-
-    public int getAddExpValue() {
-        return addExpValue;
-    }
-
-    public float getCurrMaxHealth() {
-        return currMaxHealth;
-    }
-
-    public float getCurrHealth() {
-        return currHealth;
-    }
-
-    public float getCurrMaxMana() {
-        return currMaxMana;
-    }
-
-    public float getCurrMana() {
-        return currMana;
-    }
-
-    public float getCurrStrength() {
-        return currStrength;
-    }
-
-    public float getCurrAgility() {
-        return currAgility;
-    }
-
-    public float getCurrIntelligence() {
-        return currIntelligence;
-    }
-
-    public int getCurrLevel() {
-        return currLevel;
-    }
-
-    public int getCurrExpValue() {
-        return currExpValue;
-    }
-
-    public MovingSprite getSprite() {
-        return sprite;
-    }
-
-    public void setCurrMaxHealth(float currMaxHealth) {
-        this.currMaxHealth = currMaxHealth;
-    }
-
-    public void setCurrHealth(float currHealth) {
-        this.currHealth = currHealth;
-    }
-
-    public void setCurrMaxMana(float currMaxMana) {
-        this.currMaxMana = currMaxMana;
-    }
-
-    public void setCurrMana(float currMana) {
-        this.currMana = currMana;
-    }
-
-    public void setCurrStrength(float currStrength) {
-        this.currStrength = currStrength;
-    }
-
-    public void setCurrAgility(float currAgility) {
-        this.currAgility = currAgility;
-    }
-
-    public void setCurrIntelligence(float currIntelligence) {
-        this.currIntelligence = currIntelligence;
-    }
-
-    public void setCurrLevel(int currLevel) {
-        this.currLevel = currLevel;
-    }
-
-    public void setCurrExpValue(int currExpValue) {
-        this.currExpValue = currExpValue;
-    }
-
-    public void setSprite(MovingSprite sprite) {
-        this.sprite = sprite;
-    }
-
-    public int getCurrNextLevelExp() {
-        return currNextLevelExp;
-    }
-
-    public void setCurrNextLevelExp(int currNextLevelExp) {
-        this.currNextLevelExp = currNextLevelExp;
-    }
-
-    public int getCurrExp() {
-        return currExp;
-    }
-
-    public void setCurrExp(int currExp) {
-        this.currExp = currExp;
+                int nextMD = MazeConst.getMD(nextX, nextY, targetX, targetY);
+//                System.out.println(loop + "toward: " + MazeConst.toString(nextDirection) + ", nextMD: " + nextMD + ", nextX: " + nextX + 
+//                        ", nextY: " + nextY + ", targetX: " + targetX + ", targetY: " + targetY);
+                if(nextMD == 0) {
+                    return nextMD;
+                } else {
+                    if(nextMD < bestMD) {
+                        bestMD = nextMD;
+                    }
+                    nextDirections[counter++] = nextDirection;
+                }
+            }
+        }
+        
+        for(int i = 0; i < counter; i++) {
+            int nextX = currX + f.getGenerator().getDX().get(nextDirections[i]);
+            int nextY = currY + f.getGenerator().getDY().get(nextDirections[i]);
+            int nextMD = findBestDirectionMD(nextX, nextY, currX, currY, targetX, targetY, f, loop + 1);
+            if(nextMD < bestMD) {
+                bestMD = nextMD;
+            }
+        }
+        return bestMD;
     }
 }

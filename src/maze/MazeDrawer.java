@@ -17,7 +17,6 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,10 +24,9 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import maze.model.Action;
 import maze.model.AttackEvent;
-import maze.model.Monster;
-import maze.model.MonsterType;
-import maze.sprite.Sprite;
+import maze.model.Fighter;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
@@ -66,12 +64,11 @@ public class MazeDrawer {
     
     private Map<Integer, Tile> tiles; // floor tiles
     private Map<Integer, Float> rotations; // floor tiles directions
-    private final int mazeWidth = 20;       // max=20 with current screen width
-    private final int mazeHeight = 15;      // max 15 with current screen height
+    private final int mazeWidth = 6;       // max=20 with current screen width
+    private final int mazeHeight = 6;      // max 15 with current screen height
 //    private int x, y, targetX, targetY;
 //    private float movementX, movementY;
-    private final int movementAnimationTime = 200;
-    private int elapsedTime = movementAnimationTime;
+    private int elapsedTime = MazeConst.MOVEMENT_ANIMATION_DURATION;
     
     private boolean isPaused = false;
 
@@ -117,7 +114,7 @@ public class MazeDrawer {
         Display.destroy();
     }
     
-    public Floor createMazeFloor() {
+    public Floor createMazeFloor(int mazeWidth, int mazeHeight) {
         Floor newFloor = new Floor();
         int x = pcSprite.getX(), y = pcSprite.getY();
         long seed = System.currentTimeMillis();
@@ -137,7 +134,11 @@ public class MazeDrawer {
         List<int[]> oneWayTiles = new ArrayList<>();
         for(int j = 0; j < grid.length; j++) {
             for(int i = 0; i < grid[j].length; i++) {
-                if(y != j && x != i && (grid[j][i] == 1 || grid[j][i] == 2 || grid[j][i] == 4 || grid[j][i] == 8)) {
+                if(!(y == j && x == i) && 
+                        ((grid[j][i] | MazeConst.N) == MazeConst.N || 
+                        (grid[j][i] | MazeConst.S) == MazeConst.S || 
+                        (grid[j][i] | MazeConst.E) == MazeConst.E || 
+                        (grid[j][i] | MazeConst.W) == MazeConst.W)) {
                     oneWayTiles.add(new int[]{j,i});
                 }
             }
@@ -155,35 +156,36 @@ public class MazeDrawer {
         
         // Made the other dead-end tiles as the spawn location of the monsters
         List<Character> characters = new ArrayList<>();
+        System.out.println("oneWayTiles.size(): " + oneWayTiles.size());
         for(int i = 2; i < oneWayTiles.size(); i++) {
             int[] slimeTileCoord = oneWayTiles.get(i);
             int slimeX = slimeTileCoord[1], slimeY = slimeTileCoord[0];
-            MovingSprite slimeSprite = new MovingSprite(slime, slimeX, slimeY);
-            slimeSprite.setSpriteHeight(16);
-            slimeSprite.setSpriteWidth(16);
-            slimeSprite.setMovementAnimationTime(movementAnimationTime);
-            slimeSprite.setFaceEast(slime);
-            slimeSprite.setFaceNorth(slime);
-            slimeSprite.setFaceSouth(slime);
-            slimeSprite.setFaceWest(slime);
+            Character slimeChar = CharacterFactory.CreateBlueSlimeWithLevel(slime, "Blue Slime " + i, floorCollections.size() + 1, slimeX, slimeY);
             visitedGrid[slimeY][slimeX] |= MazeConst.UNPASSABLE;
-            Monster slimeChar = CharacterFactory.CreateMonsterWithLevel("Blue Slime " + i, floorCollections.size() + 1, slimeSprite, MonsterType.BLUE_SLIME);
             characters.add(slimeChar);
-//            break;
+            break;
         }
         
+        List<AttackEvent> attackingMonster = new ArrayList<>();
+        List<AttackEvent> attackingCharacter = new ArrayList<>();
+        
+        newFloor.setAttackingMonster(attackingMonster);
+        newFloor.setAttackingCharacter(attackingCharacter);
         newFloor.setSeed(seed);
         newFloor.setGrid(grid);
         newFloor.setVisitedGrid(visitedGrid);
         newFloor.setEventGrid(eventGrid);
         newFloor.setCharacterSprites(characters);
+        newFloor.setGenerator(generator);
+        newFloor.setWidth(mazeWidth);
+        newFloor.setHeight(mazeHeight);
         return newFloor;
     }
     
     private void proceedToNextFloor() {
         int x = pcSprite.getX(), y = pcSprite.getY();
         if(cf == null) {
-            cf = createMazeFloor();
+            cf = createMazeFloor(mazeWidth, mazeHeight);
             cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
             floorCollections.add(cf);
         } else if((cf.getGrid()[y][x] & MazeConst.U) == MazeConst.U) {
@@ -191,7 +193,7 @@ public class MazeDrawer {
                 if(cf.isCanGoUp()) {
                     cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
 
-                    cf = createMazeFloor();
+                    cf = createMazeFloor(mazeWidth, mazeHeight);
                     cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
                     floorCollections.add(cf);
                 } else {
@@ -208,17 +210,10 @@ public class MazeDrawer {
             cf = nextFloor;
             cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
         }
-        
-//        try {
-//            Thread.sleep(400);
-//        } catch (InterruptedException ex) {
-//            Logger.getLogger(MazeDrawer.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+        elapsedTime = 0;
     }
     
     private final int spellCooldown = 300;
-    private boolean isForbidAction = false;
-    private boolean waitUntilAnimationEnded = false;
     private int currentCooldown = 300;
     
     public void update(int delta) {
@@ -229,7 +224,7 @@ public class MazeDrawer {
         
         pcSprite.update(delta);
         for(Character monsterChara : cf.getCharacterSprites()) {
-            monsterChara.getSprite().update(delta);
+            monsterChara.update(delta);
         }
         
         int x = pcSprite.getX(), y = pcSprite.getY();
@@ -242,6 +237,7 @@ public class MazeDrawer {
             // check if there's casted spell
             if(castedSpell.size() > 0) {
                 List<Spell> removedSpell = new ArrayList<>();
+//                System.out.println("castedSpell.size()" + castedSpell.size());
                 for(Spell spell : castedSpell) {
                     MovingSprite spellSprite = spell.getSprite();
                     spellSprite.update(delta);
@@ -262,7 +258,7 @@ public class MazeDrawer {
                             spellSprite.getCenteredMovementY() >= mazeHeight * MazeConst.TILE_HEIGHT || 
                             spellSprite.getCenteredMovementX() < 0 || 
                             spellSprite.getCenteredMovementX() >= mazeWidth * MazeConst.TILE_WIDTH) {
-                        System.out.println("Went to the void");
+//                        System.out.println("Went to the void");
                         removedSpell.add(spell);
                     } else if(spellSprite.getPreviousX() == spellX && 
                             spellSprite.getPreviousY() == spellY && 
@@ -276,60 +272,31 @@ public class MazeDrawer {
                         if((cf.getGrid()[previousY][previousX] & spellSprite.getSpriteDirection()) == 0
                                 && !isSpriteInTile) {
                             // check if there's wall between the previous tile and the current tile
-                            System.out.println("Hit the wall");
+                            System.out.println(spell.getName() + " hit the wall then extinguished!");
                             removedSpell.add(spell);
                         } else {
                             List<Character> removedChara = new ArrayList<>();
-                            for(Character chara : cf.getCharacterSprites()) {
-                                if(chara.getSprite().getX() == spellX && chara.getSprite().getY() == spellY) {
-                                // check if the spell made contact with monster
-                                // create a square box of monster and box of spell
-                                    float leftXpx = chara.getSprite().getCenteredMovementX(), rightXpx = chara.getSprite().getCenteredMovementX() + chara.getSprite().getSpriteWidth();
-                                    float upYpx = chara.getSprite().getCenteredMovementY(), downYpx = chara.getSprite().getCenteredMovementY() + chara.getSprite().getSpriteHeight();
-                                    float sLeftXpx = spellSprite.getCenteredMovementX(), sRightXpx = spellSprite.getCenteredMovementX() + spellSprite.getSpriteWidth();
-                                    float sUpYpx = spellSprite.getCenteredMovementY(), sDownYpx = spellSprite.getCenteredMovementY() + spellSprite.getSpriteHeight();
-                                    boolean madeContact = false;
-    //                                System.out.println("mon.top(" + leftXpx + "," + upYpx + ") - (" + rightXpx + "," + upYpx + ")");
-    //                                System.out.println("mon.bottom(" + leftXpx + "," + downYpx + ") - (" + rightXpx + "," + downYpx + ")");
-    //                                System.out.println("mon.top(" + sLeftXpx + "," + sUpYpx + ") - (" + sRightXpx + "," + sUpYpx + ")");
-    //                                System.out.println("mon.bottom(" + sLeftXpx + "," + sDownYpx + ") - (" + sRightXpx + "," + sDownYpx + ")");
-
-                                    // check for the left up corner
-                                    if(sLeftXpx >= leftXpx && sLeftXpx <= rightXpx &&
-                                            sUpYpx >= upYpx && sUpYpx <= downYpx) {
-                                        madeContact = true;
+                            Character chara = cf.getCharAt(spellX, spellY);
+                            if(chara != null && chara.getX() == spellX && chara.getY() == spellY) {
+                            // check if the spell made contact with monster
+                            // create a square box of monster and box of spell
+                                float leftXpx = chara.getCenteredMovementX(), rightXpx = chara.getCenteredMovementX() + chara.getSpriteWidth();
+                                float upYpx = chara.getCenteredMovementY(), downYpx = chara.getCenteredMovementY() + chara.getSpriteHeight();
+                                float sLeftXpx = spellSprite.getCenteredMovementX(), sRightXpx = spellSprite.getCenteredMovementX() + spellSprite.getSpriteWidth();
+                                float sUpYpx = spellSprite.getCenteredMovementY(), sDownYpx = spellSprite.getCenteredMovementY() + spellSprite.getSpriteHeight();
+                                if(MazeConst.isRectIntersect(leftXpx, rightXpx, upYpx, downYpx, sLeftXpx, sRightXpx, sUpYpx, sDownYpx)) {
+//                                    System.out.println("Made Contact");
+                                    pcSprite.getFighter().attack(pcSprite, chara, spell, cf);
+                                    chara.turnSprite(MazeConst.OPPOSITE_OF(spellSprite.getSpriteDirection()));
+                                    chara.setPcSeen(true);
+                                    if(chara.getFighter().getCurrHealth() <= 0f) {
+                                        combatWinEvent(spell.getOwner(), chara);
+                                        cf.getVisitedGrid()[spellY][spellX] ^= MazeConst.UNPASSABLE;
+                                        removedChara.add(chara);
                                     }
-                                    // check for the right up corner
-                                    else if(sRightXpx >= leftXpx && sRightXpx <= rightXpx &&
-                                            sUpYpx >= upYpx && sUpYpx <= downYpx) {
-                                        madeContact = true;
-                                    }
-                                    // check for the left down corner
-                                    else if(sLeftXpx >= leftXpx && sLeftXpx <= rightXpx &&
-                                            sDownYpx >= upYpx && sDownYpx <= downYpx) {
-                                        madeContact = true;
-                                    }
-                                    // check for the right down corner
-                                    else if(sRightXpx >= leftXpx && sRightXpx <= rightXpx &&
-                                            sDownYpx >= upYpx && sDownYpx <= downYpx) {
-                                        madeContact = true;
-                                    }
-                                    if(madeContact) {
-                                        System.out.println("Made Contact");
-                                        combatEvent(spell.getOwner(), chara, spell);
-                                        chara.getSprite().turnSprite(MazeConst.OPPOSITE_OF(spellSprite.getSpriteDirection()));
-                                        if(chara instanceof Monster) {
-                                            ((Monster) chara).setPcSeen(true);
-                                        }
-                                        if(chara.getCurrHealth() <= 0f) {
-                                            combatWinEvent(spell.getOwner(), chara);
-                                            cf.getVisitedGrid()[spellY][spellX] ^= MazeConst.UNPASSABLE;
-                                            removedChara.add(chara);
-                                            removedSpell.add(spell);
-                                        }
-                                    } else {
-                                        System.out.println("Not Made Contact");
-                                    }
+                                    removedSpell.add(spell);
+                                } else {
+//                                    System.out.println("Not Made Contact");
                                 }
                             }
                             cf.getCharacterSprites().removeAll(removedChara);
@@ -342,7 +309,7 @@ public class MazeDrawer {
                         if((cf.getGrid()[previousY][previousX] & spellSprite.getSpriteDirection()) == 0
                                 && !isSpriteInTile) {
                             // check if there's wall between the previous tile and the current tile
-                            System.out.println("Hit the wall");
+                            System.out.println(spell.getName() + " hit the wall then extinguished!");
                             removedSpell.add(spell);
                         }
                     }
@@ -352,22 +319,21 @@ public class MazeDrawer {
                     currentPhase = NPC_DETERMINE_ACTION_PHASE;
                 }
             } else {
-                if(attackingCharacter.size() > 0) {
+//                System.out.println("attackingCharacter.size(): " + cf.getAttackingCharacter().size());
+                if(cf.getAttackingCharacter().size() > 0) {
                     List<AttackEvent> removedAttacker = new ArrayList<>();
-                    for(AttackEvent charAttack: attackingCharacter) {
-                        combatEvent(charAttack.getAttacker(), charAttack.getDefender());
-                        charAttack.getDefender().getSprite().turnSprite(MazeConst.OPPOSITE_OF(charAttack.getAttacker().getSprite().getSpriteDirection()));
-                        if(charAttack.getDefender() instanceof Monster) {
-                            ((Monster) charAttack.getDefender()).setPcSeen(true);
-                        }
-                        if(charAttack.getDefender().getCurrHealth() <= 0f) {
+                    for(AttackEvent charAttack: cf.getAttackingCharacter()) {
+                        charAttack.getAttacker().getFighter().attack(charAttack.getAttacker(), charAttack.getDefender(), cf);
+                        charAttack.getDefender().turnSprite(MazeConst.OPPOSITE_OF(charAttack.getAttacker().getSpriteDirection()));
+                        charAttack.getDefender().setPcSeen(true);
+                        if(charAttack.getDefender().getFighter().getCurrHealth() <= 0f) {
                             combatWinEvent(charAttack.getAttacker(), charAttack.getDefender());
-                            cf.getVisitedGrid()[charAttack.getDefender().getSprite().getY()][charAttack.getDefender().getSprite().getX()] ^= MazeConst.UNPASSABLE;
+                            cf.getVisitedGrid()[charAttack.getDefender().getY()][charAttack.getDefender().getX()] ^= MazeConst.UNPASSABLE;
                             cf.getCharacterSprites().remove(charAttack.getDefender());
                         }
                         removedAttacker.add(charAttack);
                     }
-                    attackingCharacter.removeAll(removedAttacker);
+                    cf.getAttackingCharacter().removeAll(removedAttacker);
                     currentPhase = NPC_DETERMINE_ACTION_PHASE;
                 } else {
                     currentPhase = NPC_DETERMINE_ACTION_PHASE;
@@ -378,19 +344,20 @@ public class MazeDrawer {
         if(currentPhase == NPC_SPECIAL_ACTION_PHASE) {
 //            System.out.println("NPC_DETERMINE_ACTION_PHASE");
             // check if there's attacking monster
-            if(attackingMonster.size() > 0) {
+            if(cf.getAttackingMonster().size() > 0) {
                 List<AttackEvent> removedAttacker = new ArrayList<>();
-                for(AttackEvent monsterAttack: attackingMonster) {
-                    combatEvent(monsterAttack.getAttacker(), monsterAttack.getDefender());
-                    if(monsterAttack.getDefender().getCurrHealth() <= 0f) {
+//                System.out.println("getAttackingMonster.size(): " + cf.getAttackingMonster().size());
+                for(AttackEvent monsterAttack: cf.getAttackingMonster()) {
+                    monsterAttack.getAttacker().getFighter().attack(monsterAttack.getAttacker(), monsterAttack.getDefender(), cf);
+                    if(monsterAttack.getDefender().getFighter().getCurrHealth() <= 0f) {
                         combatWinEvent(monsterAttack.getAttacker(), monsterAttack.getDefender());
-                        if(monsterAttack.getDefender() == pc) {
+                        if(monsterAttack.getDefender() == pcSprite) {
                             System.out.println("GAME OVER!!");
                         }
                     }
                     removedAttacker.add(monsterAttack);
                 }
-                attackingMonster.removeAll(removedAttacker);
+                cf.getAttackingMonster().removeAll(removedAttacker);
                 currentPhase = KEY_INPUT_PHASE;
             } else {
                 currentPhase = KEY_INPUT_PHASE;
@@ -398,7 +365,7 @@ public class MazeDrawer {
         }
         
         elapsedTime += delta;
-        if(elapsedTime >= movementAnimationTime) {
+        if(elapsedTime >= MazeConst.MOVEMENT_ANIMATION_DURATION) {
             if(currentPhase == KEY_INPUT_PHASE) {
 //                System.out.println("KEY_INPUT_PHASE");
                 boolean onTheStair = false;
@@ -464,16 +431,14 @@ public class MazeDrawer {
                     // if shift is held, unleash special attack
                         if(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)) {
                             currentCooldown = 0;
-                            if(pc.getCurrMana() <= 0) {
-                                NLog.log(KTag, "attack", "Not enough mana! Mana: " + pc.getCurrMana() + "/" + pc.getCurrMaxMana());
+                            if(pcSprite.getFighter().getCurrMana() <= 0) {
+                                NLog.log(KTag, "attack", "Not enough mana! Mana: " + pcSprite.getFighter().getCurrMana() + "/" + pcSprite.getFighter().getCurrMaxMana());
                             } else {
-                                NLog.log(KTag, "attack", "Firing a spell from (" + pcSprite.getX() + "," + pcSprite.getY() + ") toward " + MazeConst.toString(pcSprite.getSpriteDirection()));
                                 MovingSprite fireballSprite = new MovingSprite(fireball, pcSprite.getX(), pcSprite.getY());
                                 fireballSprite.setSpriteHeight(12);
                                 fireballSprite.setSpriteWidth(8);
                                 fireballSprite.turnSprite(direct);
                                 fireballSprite.setMovementAnimationTime(spellCooldown);
-
                                 switch(direct) {
                                     case MazeConst.N:
                                         fireballSprite.moveSprite(fireballSprite.getX(), -1);
@@ -489,9 +454,15 @@ public class MazeDrawer {
                                         break;
                                 }
 
-                                Spell fireballSpell = new Spell("Fireball", 5, fireballSprite, pc);
-                                pc.setCurrMana(pc.getCurrMana() - 1);
+                                Spell fireballSpell = new Spell("Fireball", 5, 1, fireballSprite, pcSprite);
                                 castedSpell.add(fireballSpell);
+                                pcSprite.getFighter().setCurrMana(pcSprite.getFighter().getCurrMana() - fireballSpell.getManaCost());
+                                
+                                NLog.log(KTag, "attack", "Casted " + fireballSpell.getName() + " from (" + 
+                                        pcSprite.getX() + "," + pcSprite.getY() + ") toward " + 
+                                        MazeConst.toString(pcSprite.getSpriteDirection()) + 
+                                        ". Mana: " + pcSprite.getFighter().getCurrMana() + "/" + pcSprite.getFighter().getCurrMaxMana());
+                                
                                 currentPhase = PC_SPECIAL_ACTION_PHASE;
                             }
                         } else {
@@ -506,11 +477,10 @@ public class MazeDrawer {
                                 pcY += generator.getDY().get(direct);
                                 // check if any monster is in the position
                                 for(Character monsterChara : cf.getCharacterSprites()) {
-                                    MovingSprite monsterSp = monsterChara.getSprite();
-                                    int msX = monsterSp.getX(), msY = monsterSp.getY();
+                                    int msX = monsterChara.getX(), msY = monsterChara.getY();
 
                                     if(msX == pcX && msY == pcY) {
-                                        attackingCharacter.add(new AttackEvent(pc, monsterChara));
+                                        cf.getAttackingCharacter().add(new AttackEvent(pcSprite, monsterChara));
                                         break;
                                     }
                                 }
@@ -538,213 +508,13 @@ public class MazeDrawer {
             if(currentPhase == NPC_DETERMINE_ACTION_PHASE) {
 //                System.out.println("NPC_DETERMINE_ACTION_PHASE");
                 CHARA: for(Character monsterChara : cf.getCharacterSprites()) {
-                    MovingSprite monsterSp = monsterChara.getSprite();
-                    int msX = monsterSp.getX(), msY = monsterSp.getY();
-                        
-                    if(msX == monsterSp.getTargetX() && msY == monsterSp.getTargetY()) {
-                        if(((Monster)monsterChara).hasSeenPc()) {
-                            System.out.println(monsterChara.getName() + "@(" + msX + "," + msY + ") "
-                                    + "has seen PC @(" + pcSprite.getTargetX() + "," + pcSprite.getTargetY() + ")");
-                            // @TODO
-                            int bestDirection = monsterSp.getSpriteDirection();
-                            int nextX = msX + generator.getDX().get(bestDirection);
-                            int nextY = msY + generator.getDY().get(bestDirection);
-                            int bestMD = mazeWidth + mazeHeight;
-                            int bestX = nextX, bestY = nextY;
-                            if((cf.getGrid()[msY][msX] & bestDirection) != 0 && 
-                                    getMD(nextX, nextY, pcSprite.getTargetX(), pcSprite.getTargetY()) == 0) {
-                                attackingMonster.add(new AttackEvent(monsterChara, pc));
-                                continue CHARA;
-                            } else {
-                                for(Integer nextDirection : MazeConst.getDIRECTIONS()) {
-                                    if((cf.getGrid()[msY][msX] & nextDirection) != 0) {
-                                        nextX = msX + generator.getDX().get(nextDirection);
-                                        nextY = msY + generator.getDY().get(nextDirection);
-                                        // check if the next coord occupied or not
-//                                        if((cf.getVisitedGrid()[nextY][nextX] & MazeConst.UNPASSABLE) == MazeConst.UNPASSABLE) {
-//                                            continue;
-//                                        }
-                                        
-                                        int nextMD = getMD(nextX, nextY, pcSprite.getTargetX(), pcSprite.getTargetY());
-                                        if(nextMD == 0) {
-                                            monsterSp.turnSprite(nextDirection);
-                                            attackingMonster.add(new AttackEvent(monsterChara, pc));
-                                            continue CHARA;
-                                        } else {
-                                            nextMD = findBestDirection(monsterSp, nextX, nextY, msX, msY);
-                                            if(nextMD < bestMD) {
-                                                bestDirection = nextDirection;
-                                                bestMD = nextMD;
-                                                bestX = nextX;
-                                                bestY = nextY;
-                                            }
-                                        }
-                                    }
-                                }
-                                if((cf.getVisitedGrid()[bestY][bestX] & MazeConst.UNPASSABLE) == MazeConst.UNPASSABLE) {
-                                    
-                                } else {
-                                    moveMonster(bestX, bestY, monsterChara, bestDirection);
-                                }
-                            }
-                            // Create algorithm to search for the shortest path toward PC
-                            // if pc is directly beside the monster, attack PC
-                            // if not, go near PC with the shortest path
-                            
-                        } else {
-                            if(moveRandomly(monsterSp, monsterChara)) continue CHARA;
-                        }
-                    }
+                    Action action = monsterChara.getAi().takeTurn(monsterChara, pcSprite, cf);
+//                    System.out.println(monsterChara.getName() + " action = " + action);
                 }
                 currentPhase = NPC_SPECIAL_ACTION_PHASE;
             }
         }
         updateFPS();
-    }
-    
-    private int findBestDirection(MovingSprite ms, int currX, int currY, int prevX, int prevY) {
-//        System.out.println("findBestDirection " + currX + "," + currY);
-        int[] nextDirections = new int[MazeConst.getDIRECTIONS().size()];
-        int counter = 0, bestMD = mazeWidth + mazeHeight;
-        for(Integer nextDirection : MazeConst.getDIRECTIONS()) {
-            if((cf.getGrid()[currY][currX] & nextDirection) != 0) {
-                int nextX = currX + generator.getDX().get(nextDirection);
-                int nextY = currY + generator.getDY().get(nextDirection);
-                
-                // check if the next coord occupied or not
-//                if((cf.getVisitedGrid()[nextY][nextX] & MazeConst.UNPASSABLE) == MazeConst.UNPASSABLE) {
-//                    continue;
-//                }
-                if(nextX == prevX && nextY == prevY) {
-                    continue;
-                }
-
-                int nextMD = getMD(nextX, nextY, pcSprite.getTargetX(), pcSprite.getTargetY());
-                if(nextMD == 0) {
-                    return nextMD;
-                } else {
-                    if(nextMD < bestMD) {
-                        bestMD = nextMD;
-                    }
-                    nextDirections[counter++] = nextDirection;
-                }
-            }
-        }
-        for(int i = 0; i < counter; i++) {
-            int nextX = currX + generator.getDX().get(nextDirections[i]);
-            int nextY = currY + generator.getDY().get(nextDirections[i]);
-            int nextMD = findBestDirection(ms, nextX, nextY, currX, currY);
-            if(nextMD < bestMD) {
-                bestMD = nextMD;
-            }
-        }
-        return bestMD;
-    }
-    
-    /**
-     * Get the Manhattan Distance between coordinate
-     * @param x1
-     * @param y1
-     * @param x2
-     * @param y2
-     * @return 
-     */
-    private int getMD(int x1, int y1, int x2, int y2) {
-        int xDis = Math.abs(x1 - x2);
-        int yDis = Math.abs(y1 - y2);
-        return xDis + yDis;
-    }
-
-    private boolean moveRandomly(MovingSprite monsterSp, Character monsterChara) {
-        int msX;
-        int msY;
-        List<Integer> thisDirection = new ArrayList<>();
-        thisDirection.addAll(MazeConst.getDIRECTIONS());
-        Collections.shuffle(thisDirection);
-        int way = 0;
-        for (Integer direct : thisDirection) {
-            msX = monsterSp.getX();
-            msY = monsterSp.getY();
-            // check if direction is passable
-            if ((cf.getGrid()[msY][msX] & direct) != 0) {
-                msX += generator.getDX().get(direct);
-                msY += generator.getDY().get(direct);
-                // checking if the next target had the same coordinate as previous coordinate
-                if (monsterSp.getPreviousX() == msX && monsterSp.getPreviousY() == msY) {
-                    if((cf.getVisitedGrid()[msY][msX] & MazeConst.UNPASSABLE) == 0) {
-                        way++;
-                    }
-                // checking if the next target is passable
-                } else if ((cf.getVisitedGrid()[msY][msX] & MazeConst.UNPASSABLE) == 0) {
-                    moveMonster(msX, msY, monsterChara, direct);
-                    // continue to loop the monster chara
-                    return true;
-                } else {
-                    if(msX == pcSprite.getTargetX() && msY == pcSprite.getTargetY()) {
-                        ((Monster) monsterChara).setPcSeen(true);
-                        attackingMonster.add(new AttackEvent(monsterChara, pc));
-                        return true;
-                    }
-                }
-            }
-        }
-        // if there's only one way that possible and previously it was not choosen
-        // because it was the previous way
-        // (because if it was possible and it wasn't the previous coordinate,
-        // this expression would never been called in the first place)
-        if(way == 1) {
-            msX = monsterSp.getPreviousX();
-            msY = monsterSp.getPreviousY();
-            moveMonster(msX, msY, monsterChara, MazeConst.OPPOSITE_OF(monsterSp.getSpriteDirection()));
-            
-        } else {
-            // else means that there's no other direction that possible to move,
-            // so this monster should wait for other monster to move first
-        }
-        return false;
-    }
-    
-    public void moveMonster(int x, int y, Character mChar, Integer direction) {
-        moveCharacter(x, y, mChar, direction);
-        // check the direction monster looked. If pc is there, change hasSeen as true
-        checkDirectionHasPc((Monster) mChar);
-    }
-
-    public void moveCharacter(int x, int y, Character mChar, Integer direction) {
-        MovingSprite monsterSp = mChar.getSprite();
-        // make the current coordinate passable for other character
-        cf.getVisitedGrid()[monsterSp.getY()][monsterSp.getX()] ^= MazeConst.UNPASSABLE;
-        // move the monster to another coordinate.
-        monsterSp.moveSprite(x, y);
-        monsterSp.turnSprite(direction);
-        // make the target coordinate as unpassable for other character.
-        cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
-    }
-    
-    private boolean checkDirectionHasPc(Monster mon) {
-//        if(mon.hasSeenPc()) return;
-        
-        int nextX = mon.getSprite().getTargetX(), nextY = mon.getSprite().getTargetY();
-        do {
-//            System.out.println(mon.getName() + " toward " + direction + " (" + nextX + ", " + nextY + ")");
-            if ((pcSprite.getX() == nextX && pcSprite.getY() == nextY) || 
-                    (pcSprite.getTargetX() == nextX && pcSprite.getTargetY() == nextY) ||
-                    (pcSprite.getPreviousX()== nextX && pcSprite.getPreviousY() == nextY)) {
-                NLog.log(KTag, "checkDirection", mon.getName() + " toward " + 
-                        MazeConst.toString(mon.getSprite().getSpriteDirection()) + 
-                        " has seen PC@(" + nextX + "," + nextY + ") from (" + 
-                        mon.getSprite().getX() + "," + mon.getSprite().getY() + ")");
-                mon.setPcSeen(true);
-                return true;
-            }
-            if((cf.getGrid()[nextY][nextX] & mon.getSprite().getSpriteDirection()) != 0) {
-                nextX += generator.getDX().get(mon.getSprite().getSpriteDirection());
-                nextY += generator.getDY().get(mon.getSprite().getSpriteDirection());
-            } else {
-                break;
-            }
-        } while(true);
-        return false;
     }
 
     public void updateFPS() {
@@ -772,11 +542,8 @@ public class MazeDrawer {
     Tile treasure, treasureOpened, healingPotion, manaPotion;
     int tileId;
     
-    private Character pc;
-    private MovingSprite pcSprite;
+    private Character pcSprite;
     private List<Spell> castedSpell;
-    private List<AttackEvent> attackingMonster;
-    private List<AttackEvent> attackingCharacter;
     
     public void initSprite() {
         URL url = Thread.currentThread().getContextClassLoader().getResource("image/Game2.png");
@@ -803,8 +570,8 @@ public class MazeDrawer {
             healingPotion = new Tile(64,96,32,32,test.getWidth(), test.getHeight(), tileId); // Locked chest facing north
             manaPotion = new Tile(96,96,32,32,test.getWidth(), test.getHeight(), tileId); // Open chest facing north
             
-            pcFaceLeft = new Tile(64, 32, 32, 32, test.getWidth(), test.getHeight(), tileId); // The character to be moved facing left
-            pcFaceRight = new Tile(96, 32, 32, 32, test.getWidth(), test.getHeight(), tileId); // The character to be moved facing right;
+            pcFaceLeft = new Tile(71, 35, 18, 26, test.getWidth(), test.getHeight(), tileId); // The character to be moved facing left
+            pcFaceRight = new Tile(103, 35, 18, 26, test.getWidth(), test.getHeight(), tileId); // The character to be moved facing right;
 //            fireball = new Tile(64, 64, 32, 32, test.getWidth(), test.getHeight(), tileId); // Fireball facing north
             fireball = new Tile(76, 76, 8, 12, test.getWidth(), test.getHeight(), tileId); // Fireball facing north
             slime = new Tile(104, 72, 16, 16, test.getWidth(), test.getHeight(), tileId); // Monster facing south
@@ -836,19 +603,20 @@ public class MazeDrawer {
             tiles.put(36, stairDown);     rotations.put(36, 90f);
             tiles.put(40, stairDown);     rotations.put(40, -90f);
             
-            pcSprite = new MovingSprite(pcFaceLeft, 0, 0);
+            Fighter pcFighter = new Fighter(1, 50f, 10f, 1f, 1f, 1f, 0);
+            pcFighter.setPotentials(4, 3, 0.5f, 0.5f, 2, 1);
+            pcFighter.setCurrLevel(1);
+            
+            pcSprite = new Character(pcFaceLeft, 0, 0, "Gandalph", pcFighter);
             pcSprite.setFaceWest(pcFaceLeft);
             pcSprite.setFaceEast(pcFaceRight);
-            pcSprite.setMovementAnimationTime(movementAnimationTime);
+            pcSprite.setSpriteHeight(26);
+            pcSprite.setSpriteWidth(18);
+            pcSprite.setMovementAnimationTime(MazeConst.MOVEMENT_ANIMATION_DURATION);
             pcSprite.setAutomaticTurnEnabled(false);
             pcSprite.turnSprite(MazeConst.E);
-            pc = new Character("Gandalph", 1, 50f, 10f, 1f, 1f, 1f, 0, pcSprite);
-            pc.setPotentials(4, 3, 0.5f, 0.5f, 2, 1);
-            pc.setCurrLevel(1);
             
             castedSpell = new ArrayList<>();
-            attackingMonster = new ArrayList<>();
-            attackingCharacter = new ArrayList<>();
             
             proceedToNextFloor();
         } catch (IOException ex) {
@@ -908,14 +676,13 @@ public class MazeDrawer {
             }
         }
         for(Character monsterChara : cf.getCharacterSprites()) {
-            MovingSprite monsterSprite = monsterChara.getSprite();
 //                    if((monsterSprite.isSpriteInTile(monsterSprite.getX(), monsterSprite.getY()) &&
 //                            (cf.getVisitedGrid()[monsterSprite.getY()][monsterSprite.getX()] & MazeConst.SEEN) == MazeConst.SEEN)
 //                            ||
 //                            (monsterSprite.isSpriteInTile(monsterSprite.getTargetX(), monsterSprite.getTargetY()) &&
 //                            (cf.getVisitedGrid()[monsterSprite.getTargetY()][monsterSprite.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN)) {
-                drawTile(monsterSprite.getFacingDirectionTile(-1), 
-                        monsterSprite.getCenteredMovementX(), monsterSprite.getCenteredMovementY(), 0, monsterSprite.getSpriteWidth(), monsterSprite.getSpriteHeight());
+                drawTile(monsterChara.getFacingDirectionTile(-1), 
+                        monsterChara.getCenteredMovementX(), monsterChara.getCenteredMovementY(), 0, monsterChara.getSpriteWidth(), monsterChara.getSpriteHeight());
 //                    }
 
         }
@@ -1085,31 +852,14 @@ public class MazeDrawer {
         return textureID;
     }
 
-    private void combatEvent(Character attacker, Character defender, Spell spell) {
-        float potentialDamage = attacker.getCurrIntelligence() + spell.getAttackPower();
-        float potentialResist = defender.getCurrIntelligence() / 2;
-        float damage = potentialDamage - potentialResist;
-        if(damage <= 1f) damage = 1f;
-        defender.setCurrHealth(defender.getCurrHealth() - damage);
-        NLog.log(KTag, "combatEvent", attacker.getName() + " use " + spell.getName() + " dealt " + damage + " damage. HP:" + defender.getCurrHealth() + "/" + defender.getCurrMaxHealth());
-    }
-
-    private void combatEvent(Character attacker, Character defender) {
-        float potentialDamage = attacker.getCurrStrength();
-        float potentialResist = defender.getCurrStrength()/ 2;
-        float damage = potentialDamage - potentialResist;
-        if(damage <= 1f) damage = 1f;
-        defender.setCurrHealth(defender.getCurrHealth() - damage);
-        NLog.log(KTag, "combatEvent", attacker.getName() + " dealt " + damage + " damage. HP:" + defender.getCurrHealth() + "/" + defender.getCurrMaxHealth());
-    }
-
     private void combatWinEvent(Character attacker, Character defender) {
         // calculate exp
         NLog.log(KTag, "combatWinEvent", attacker.getName() + " win the battle ");
-        attacker.setCurrExp(attacker.getCurrExp() + defender.getCurrExpValue());
-        NLog.log(KTag, "combatWinEvent", "Receive " + defender.getCurrExpValue() + " exp. Curr: " + attacker.getCurrExp() + "/" + attacker.getCurrNextLevelExp());
+        attacker.getFighter().setCurrExp(attacker.getFighter().getCurrExp() + defender.getFighter().getCurrExpValue());
+        NLog.log(KTag, "combatWinEvent", "Receive " + defender.getFighter().getCurrExpValue() + 
+                " exp. Curr: " + attacker.getFighter().getCurrExp() + "/" + attacker.getFighter().getCurrNextLevelExp());
         
-        while(attacker.getCurrExp() >= attacker.getCurrNextLevelExp()) {
+        while(attacker.getFighter().getCurrExp() >= attacker.getFighter().getCurrNextLevelExp()) {
             levelUp(attacker);
         }
         
@@ -1117,39 +867,39 @@ public class MazeDrawer {
     }
     
     public void levelUp(Character character) {
-        character.setCurrLevel(character.getCurrLevel() + 1);
-        float health = character.getCurrMaxHealth() + character.getAddHealth();
-        float mana = character.getCurrMaxMana() + character.getAddMana();
-        float strength = character.getCurrStrength() + character.getAddStrength();
-        float agility = character.getCurrAgility() + character.getAddAgility();
-        float intelligence = character.getCurrIntelligence() + character.getAddIntelligence();
-        int currExpValue = character.getCurrExpValue() + character.getAddExpValue();
-        int nextLevelExp = Math.round((character.getCurrAgility() + 
-                character.getCurrIntelligence() + character.getCurrStrength() + 
-                character.getCurrExpValue()) * character.getCurrLevel());
+        character.getFighter().setCurrLevel(character.getFighter().getCurrLevel() + 1);
+        float health = character.getFighter().getCurrMaxHealth() + character.getFighter().getAddHealth();
+        float mana = character.getFighter().getCurrMaxMana() + character.getFighter().getAddMana();
+        float strength = character.getFighter().getCurrStrength() + character.getFighter().getAddStrength();
+        float agility = character.getFighter().getCurrAgility() + character.getFighter().getAddAgility();
+        float intelligence = character.getFighter().getCurrIntelligence() + character.getFighter().getAddIntelligence();
+        int currExpValue = character.getFighter().getCurrExpValue() + character.getFighter().getAddExpValue();
+        int nextLevelExp = Math.round((character.getFighter().getCurrAgility() + 
+                character.getFighter().getCurrIntelligence() + character.getFighter().getCurrStrength() + 
+                character.getFighter().getCurrExpValue()) * character.getFighter().getCurrLevel());
         
         NLog.log(KTag, "levelUp", 
                 "###################################");
         NLog.log(KTag, "levelUp", 
-                character.getName() + " level up to " + character.getCurrLevel() + "!!!");
+                character.getName() + " level up to " + character.getFighter().getCurrLevel() + "!!!");
         NLog.log(KTag, "levelUp", 
-                "Health: " + character.getCurrMaxHealth() + " -> " + health + " \n" +
-                "Mana:   " + character.getCurrMaxMana() + " -> " + mana + " \n" +
-                "Str:    " + character.getCurrStrength() + " -> " + strength + " \n" +
-                "Agi:    " + character.getCurrAgility() + " -> " + agility + " \n" +
-                "Int:    " + character.getCurrIntelligence()+ " -> " + intelligence + " \n" +
-                "Next:   " + character.getCurrExp() + "/" + nextLevelExp + "\n" +
+                "Health: " + character.getFighter().getCurrMaxHealth() + " -> " + health + " \n" +
+                "Mana:   " + character.getFighter().getCurrMaxMana() + " -> " + mana + " \n" +
+                "Str:    " + character.getFighter().getCurrStrength() + " -> " + strength + " \n" +
+                "Agi:    " + character.getFighter().getCurrAgility() + " -> " + agility + " \n" +
+                "Int:    " + character.getFighter().getCurrIntelligence()+ " -> " + intelligence + " \n" +
+                "Next:   " + character.getFighter().getCurrExp() + "/" + nextLevelExp + "\n" +
                 "Health and Mana are fully restored.");
         NLog.log(KTag, "levelUp", 
                 "###################################");
-        character.setCurrMaxHealth(health);
-        character.setCurrHealth(health);
-        character.setCurrMaxMana(mana);
-        character.setCurrMana(mana);
-        character.setCurrStrength(strength);
-        character.setCurrAgility(agility);
-        character.setCurrIntelligence(intelligence);
-        character.setCurrExpValue(currExpValue);
-        character.setCurrNextLevelExp(nextLevelExp);
+        character.getFighter().setCurrMaxHealth(health);
+        character.getFighter().setCurrHealth(health);
+        character.getFighter().setCurrMaxMana(mana);
+        character.getFighter().setCurrMana(mana);
+        character.getFighter().setCurrStrength(strength);
+        character.getFighter().setCurrAgility(agility);
+        character.getFighter().setCurrIntelligence(intelligence);
+        character.getFighter().setCurrExpValue(currExpValue);
+        character.getFighter().setCurrNextLevelExp(nextLevelExp);
     }
 }
