@@ -64,8 +64,8 @@ public class MazeDrawer {
     
     private Map<Integer, Tile> tiles; // floor tiles
     private Map<Integer, Float> rotations; // floor tiles directions
-    private final int mazeWidth = 6;       // max=20 with current screen width
-    private final int mazeHeight = 6;      // max 15 with current screen height
+    private final int mazeWidth = 15;       // max=20 with current screen width
+    private final int mazeHeight = 15;      // max 15 with current screen height
 //    private int x, y, targetX, targetY;
 //    private float movementX, movementY;
     private int elapsedTime = MazeConst.MOVEMENT_ANIMATION_DURATION;
@@ -163,7 +163,7 @@ public class MazeDrawer {
             Character slimeChar = CharacterFactory.CreateBlueSlimeWithLevel(slime, "Blue Slime " + i, floorCollections.size() + 1, slimeX, slimeY);
             visitedGrid[slimeY][slimeX] |= MazeConst.UNPASSABLE;
             characters.add(slimeChar);
-            break;
+//            break;
         }
         
         List<AttackEvent> attackingMonster = new ArrayList<>();
@@ -856,7 +856,7 @@ public class MazeDrawer {
         // calculate exp
         NLog.log(KTag, "combatWinEvent", attacker.getName() + " win the battle ");
         attacker.getFighter().setCurrExp(attacker.getFighter().getCurrExp() + defender.getFighter().getCurrExpValue());
-        NLog.log(KTag, "combatWinEvent", "Receive " + defender.getFighter().getCurrExpValue() + 
+        NLog.log(KTag, "combatWinEvent", attacker.getName() + " gained " + defender.getFighter().getCurrExpValue() + 
                 " exp. Curr: " + attacker.getFighter().getCurrExp() + "/" + attacker.getFighter().getCurrNextLevelExp());
         
         while(attacker.getFighter().getCurrExp() >= attacker.getFighter().getCurrNextLevelExp()) {
@@ -881,7 +881,7 @@ public class MazeDrawer {
         NLog.log(KTag, "levelUp", 
                 "###################################");
         NLog.log(KTag, "levelUp", 
-                character.getName() + " level up to " + character.getFighter().getCurrLevel() + "!!!");
+                character.getName() + " grew to " + character.getFighter().getCurrLevel() + "!!!");
         NLog.log(KTag, "levelUp", 
                 "Health: " + character.getFighter().getCurrMaxHealth() + " -> " + health + " \n" +
                 "Mana:   " + character.getFighter().getCurrMaxMana() + " -> " + mana + " \n" +

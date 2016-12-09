@@ -84,12 +84,12 @@ public class Character extends MovingSprite {
         int bestMD = f.getWidth() + f.getHeight();
         int bestX = 0, bestY = 0;
         for(Integer nextDirection : MazeConst.getDIRECTIONS()) {
-            if((f.getGrid()[getY()][getX()] & nextDirection) != 0) {
+            if((f.getGrid()[getY()][getX()] & nextDirection) == nextDirection) {
                 int nextX = getX() + f.getGenerator().getDX().get(nextDirection);
                 int nextY = getY() + f.getGenerator().getDY().get(nextDirection);
                 
                 int nextMD = MazeConst.getMD(nextX, nextY, targetX, targetY);
-                if(nextMD == 0 && (f.getVisitedGrid()[bestY][bestX] & MazeConst.UNPASSABLE) == 0) {
+                if(nextMD == 0 && (f.getVisitedGrid()[nextY][nextX] & MazeConst.UNPASSABLE) == 0) {
                     bestDirection = nextDirection;
                     bestMD = nextMD;
                     bestX = nextX;

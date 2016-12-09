@@ -11,12 +11,14 @@ import java.util.List;
 import maze.Floor;
 import maze.MazeConst;
 import static maze.MazeConst.toString;
+import util.NLog;
 
 /**
  *
  * @author MG-PC072
  */
 public class BasicMonster implements AI {
+    private static final String KTag = "BasicMonster";
     @Override
     public Action takeTurn(Character owner, Character target, Floor f) {
         int msX = owner.getX(), msY = owner.getY();
@@ -27,7 +29,7 @@ public class BasicMonster implements AI {
                 int directionTowardPC = MazeConst.getDirectionUsingVector(msX, msY, target.getTargetX(), target.getTargetY());
                 owner.turnSprite(directionTowardPC);
                 owner.setPcSeen(true);
-                System.out.println(target.getName() + " is within " + owner.getName() + "'s attack range-> direction: " + MazeConst.toString(directionTowardPC));
+                NLog.log(KTag, "takeTurn", target.getName() + " is within " + owner.getName() + "'s attack range-> direction: " + MazeConst.toString(directionTowardPC));
                 f.getAttackingMonster().add(event);
                 action = Action.NORMAL_ATTACK;
                 
@@ -88,7 +90,8 @@ public class BasicMonster implements AI {
             owner.moveToward(targetX, targetY, f);
             return true;
         } else {
-            // else means that there's no other direction that possible to move,
+//            NLog.log(KTag, "moveRandomly", owner.getName() + "@(" + owner.getTargetX() + "," + owner.getTargetY() + ") could not move!");
+                // else means that there's no other direction that possible to move,
             // so this monster should wait for other monster to move first
         }
         return false;
