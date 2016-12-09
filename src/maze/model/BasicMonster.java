@@ -87,7 +87,13 @@ public class BasicMonster implements AI {
 //            System.out.println(owner.getName() + " way == 1");
             targetX = owner.getPreviousX();
             targetY = owner.getPreviousY();
-            owner.moveToward(targetX, targetY, f);
+            // make the current coordinate passable for other character
+            f.getVisitedGrid()[owner.getY()][owner.getX()] ^= MazeConst.UNPASSABLE;
+            // move the monster to another coordinate.
+            owner.moveSprite(targetX, targetY);
+            owner.turnSprite(owner.getPreviousDirection());
+            // make the target coordinate as unpassable for other character.
+            f.getVisitedGrid()[targetY][targetX] ^= MazeConst.UNPASSABLE;
             return true;
         } else {
 //            NLog.log(KTag, "moveRandomly", owner.getName() + "@(" + owner.getTargetX() + "," + owner.getTargetY() + ") could not move!");

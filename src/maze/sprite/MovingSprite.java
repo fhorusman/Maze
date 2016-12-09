@@ -16,14 +16,15 @@ import maze.MazeConst;
 public class MovingSprite extends Sprite {
     private int x, y, targetX, targetY;
     private float movementX, movementY;
+    private int spriteDirection;
     
     private int movementAnimationTimePerTile;
     private int totalMovementAnimationTimeNeeded;
     private int elapsedTime;
     
-    private int spriteDirection;
     private int previousX;
     private int previousY;
+    private int previousDirection;
 
     public int getSpriteDirection() {
         return spriteDirection;
@@ -60,6 +61,14 @@ public class MovingSprite extends Sprite {
 
     public void setY(int y) {
         this.y = y;
+    }
+
+    public int getPreviousDirection() {
+        return previousDirection;
+    }
+
+    public void setPreviousDirection(int previousDirection) {
+        this.previousDirection = previousDirection;
     }
 
     public int getPreviousX() {
@@ -123,6 +132,7 @@ public class MovingSprite extends Sprite {
         previousY = y;
         this.targetX = targetX;
         this.targetY = targetY;
+        this.previousDirection = spriteDirection;
         elapsedTime = 0;
         int distance = Math.abs(targetX - x) + Math.abs(targetY - y);
         totalMovementAnimationTimeNeeded = movementAnimationTimePerTile * distance;
@@ -137,6 +147,7 @@ public class MovingSprite extends Sprite {
             spriteHeight = spriteWidth;
             spriteWidth = temp;
         }
+        previousDirection = spriteDirection;
         spriteDirection = DIRECTION;
     }
     

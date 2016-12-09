@@ -135,28 +135,30 @@ public class MazeConst {
     }
     
     public static boolean checkDirectionHasTarget(Character owner, Character target, Floor f) {
-        int nextX = owner.getTargetX(), nextY = owner.getTargetY();
-        int x = owner.getX(), y = owner.getY();
-        // Check if target is within range
-//        if(isWithinRange(nextX, nextY, target.getTargetX(), target.getTargetY(), owner.getFighter().getVisionRange(), f)) {
-//            return true;
-//        }
-        
-        do {
-            if ((target.getX() == nextX && target.getY() == nextY) || 
-                    (target.getTargetX() == nextX && target.getTargetY() == nextY)) {
-                NLog.log(KTag, "checkDirectionHasTarget", owner.getName() + "@(" + x + "," + nextY + ") -> (" + nextX + "," + nextY + ") toward " + 
-                        toString(owner.getSpriteDirection()) + " has seen " + target.getName());
-                owner.setPcSeen(true);
-                return true;
+        if(owner.hasSeenPc()) return true;
+        for (Integer direct : MazeConst.getDIRECTIONS()) {
+            if(direct == MazeConst.OPPOSITE_OF(owner.getSpriteDirection())) {
+                continue;
             }
-            if((f.getGrid()[nextY][nextX] & owner.getSpriteDirection()) != 0) {
-                nextX += f.getGenerator().getDX().get(owner.getSpriteDirection());
-                nextY += f.getGenerator().getDY().get(owner.getSpriteDirection());
-            } else {
-                break;
-            }
-        } while(true);
+            
+            int nextX = owner.getTargetX(), nextY = owner.getTargetY();
+            int x = owner.getX(), y = owner.getY();
+            do {
+                if (//(target.getX() == nextX && target.getY() == nextY) || 
+                        (target.getTargetX() == nextX && target.getTargetY() == nextY)) {
+                    NLog.log(KTag, "checkDirectionHasTarget", owner.getName() + "@(" + x + "," + nextY + ") -> (" + nextX + "," + nextY + ") toward " + 
+                            toString(direct) + " has seen " + target.getName());
+                    owner.setPcSeen(true);
+                    return true;
+                }
+                if((f.getGrid()[nextY][nextX] & direct) == direct) {
+                    nextX += f.getGenerator().getDX().get(direct);
+                    nextY += f.getGenerator().getDY().get(direct);
+                } else {
+                    break;
+                }
+            } while(true);
+        }
         return false;
     }
 
