@@ -187,6 +187,7 @@ public class MazeDrawer {
         if(cf == null) {
             cf = createMazeFloor(mazeWidth, mazeHeight);
             cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
+            seeDirectionalTiles(x, y);
             floorCollections.add(cf);
         } else if((cf.getGrid()[y][x] & MazeConst.U) == MazeConst.U) {
             if(cf.getFloorNumber() + 1 >= floorCollections.size()){
@@ -195,6 +196,7 @@ public class MazeDrawer {
 
                     cf = createMazeFloor(mazeWidth, mazeHeight);
                     cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
+                    seeDirectionalTiles(x, y);
                     floorCollections.add(cf);
                 } else {
                     return;
@@ -213,8 +215,62 @@ public class MazeDrawer {
         elapsedTime = 0;
     }
     
-    private final int spellCooldown = 300;
-    private int currentCooldown = 300;
+    private void seeDirectionalTiles(int targetX, int targetY) {
+        // Make the target tiles seen
+        cf.getVisitedGrid()[targetY][targetX] |= MazeConst.SEEN;
+        // Look at north
+        if((cf.getGrid()[targetY][targetX] & MazeConst.N) == MazeConst.N) {
+            int dx = 0, dy = -1;
+            // move specified direction tiles
+            int frontX = targetX + dx, frontY = targetY + dy;
+            while(frontX >= 0 && frontY >=0 && frontX < cf.getWidth() && frontY < cf.getHeight()) {
+                // Skip if the specified target tiles has been passed before.
+                if((cf.getVisitedGrid()[frontY][frontX] & MazeConst.SEEN) == MazeConst.SEEN) break;
+                // Make the specified direction tiles seen.
+                cf.getVisitedGrid()[frontY][frontX] |= MazeConst.SEEN;
+                // Skip if there's no path to next direction tiles.
+                if((cf.getGrid()[frontY][frontX] & MazeConst.N) != MazeConst.N) break;
+                // move specified direction tiles
+                frontX += dx; frontY += dy;
+            }
+        }
+        // Look at east
+        if((cf.getGrid()[targetY][targetX] & MazeConst.E) == MazeConst.E) {
+            int dx = 1, dy = 0;
+            int frontX = targetX + dx, frontY = targetY + dy;
+            while(frontX >= 0 && frontY >=0 && frontX < cf.getWidth() && frontY < cf.getHeight()) {
+                if((cf.getVisitedGrid()[frontY][frontX] & MazeConst.SEEN) == MazeConst.SEEN) break;
+                cf.getVisitedGrid()[frontY][frontX] |= MazeConst.SEEN;
+                if((cf.getGrid()[frontY][frontX] & MazeConst.E) != MazeConst.E) break;
+                frontX += dx; frontY += dy;
+            }
+        }
+        // Look at south
+        if((cf.getGrid()[targetY][targetX] & MazeConst.S) == MazeConst.S) {
+            int dx = 0, dy = 1;
+            int frontX = targetX + dx, frontY = targetY + dy;
+            while(frontX >= 0 && frontY >=0 && frontX < cf.getWidth() && frontY < cf.getHeight()) {
+                if((cf.getVisitedGrid()[frontY][frontX] & MazeConst.SEEN) == MazeConst.SEEN) break;
+                cf.getVisitedGrid()[frontY][frontX] |= MazeConst.SEEN;
+                if((cf.getGrid()[frontY][frontX] & MazeConst.S) != MazeConst.S) break;
+                frontX += dx; frontY += dy;
+            }
+        }
+        // Look at west
+        if((cf.getGrid()[targetY][targetX] & MazeConst.W) == MazeConst.W) {
+            int dx = -1, dy = 0;
+            int frontX = targetX + dx, frontY = targetY + dy;
+            while(frontX >= 0 && frontY >=0 && frontX < cf.getWidth() && frontY < cf.getHeight()) {
+                if((cf.getVisitedGrid()[frontY][frontX] & MazeConst.SEEN) == MazeConst.SEEN) break;
+                cf.getVisitedGrid()[frontY][frontX] |= MazeConst.SEEN;
+                if((cf.getGrid()[frontY][frontX] & MazeConst.W) != MazeConst.W) break;
+                frontX += dx; frontY += dy;
+            }
+        }
+    }
+    
+    private final int spellCooldown = 128;
+    private int currentCooldown = 128;
     
     public void update(int delta) {
         if(Keyboard.isKeyDown(Keyboard.KEY_ESCAPE)) {
@@ -500,6 +556,7 @@ public class MazeDrawer {
                     cf.getVisitedGrid()[y][x] ^= MazeConst.UNPASSABLE;
                     cf.getVisitedGrid()[targetY][targetX] ^= MazeConst.UNPASSABLE;
                     pcSprite.moveSprite(targetX, targetY);
+                    seeDirectionalTiles(targetX, targetY);
                     elapsedTime = 0;
                     currentPhase = NPC_DETERMINE_ACTION_PHASE;
                 }
@@ -655,7 +712,7 @@ public class MazeDrawer {
         glBindTexture(GL_TEXTURE_2D, tileId);
         for(int y = 0; y < cf.getGrid().length; y++) {
             for(int x = 0; x < cf.getGrid()[y].length; x++) {
-//                if((cf.getVisitedGrid()[y][x] & MazeConst.SEEN) != 0) {
+                if((cf.getVisitedGrid()[y][x] & MazeConst.SEEN) != 0) {
                     drawTile(tiles.get(cf.getGrid()[y][x]), x * 32, y * 32, 0, 32, 32, rotations.get(cf.getGrid()[y][x]));
                 
                     if((cf.getEventGrid()[y][x] & MazeConst.TREASURE) != 0) {
@@ -663,7 +720,7 @@ public class MazeDrawer {
                     } else if((cf.getEventGrid()[y][x] & MazeConst.TREASURE_OPENED) != 0) {
                         drawTile(treasureOpened, x * 32, y * 32, 0, 32, 32);
                     }
-//                }
+                }
         //        
                 
                  
@@ -676,15 +733,21 @@ public class MazeDrawer {
             }
         }
         for(Character monsterChara : cf.getCharacterSprites()) {
-//                    if((monsterSprite.isSpriteInTile(monsterSprite.getX(), monsterSprite.getY()) &&
-//                            (cf.getVisitedGrid()[monsterSprite.getY()][monsterSprite.getX()] & MazeConst.SEEN) == MazeConst.SEEN)
+                    if(
+//                            (monsterChara.isSpriteInTile(monsterChara.getX(), monsterChara.getY()) &&
+//                            (cf.getVisitedGrid()[monsterChara.getY()][monsterChara.getX()] & MazeConst.SEEN) == MazeConst.SEEN)
 //                            ||
-//                            (monsterSprite.isSpriteInTile(monsterSprite.getTargetX(), monsterSprite.getTargetY()) &&
-//                            (cf.getVisitedGrid()[monsterSprite.getTargetY()][monsterSprite.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN)) {
+//                            (monsterChara.isSpriteInTile(monsterChara.getTargetX(), monsterChara.getTargetY()) &&
+//                            (cf.getVisitedGrid()[monsterChara.getTargetY()][monsterChara.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN)) 
+                        
+                            (cf.getVisitedGrid()[monsterChara.getY()][monsterChara.getX()] & MazeConst.SEEN) == MazeConst.SEEN ||
+                            (cf.getVisitedGrid()[monsterChara.getTargetY()][monsterChara.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN
+                    ) {
                 drawTile(monsterChara.getFacingDirectionTile(-1), 
-                        monsterChara.getCenteredMovementX(), monsterChara.getCenteredMovementY(), 0, monsterChara.getSpriteWidth(), monsterChara.getSpriteHeight());
-//                    }
-
+                        monsterChara.getCenteredMovementX(), monsterChara.getCenteredMovementY(), 
+                        0, monsterChara.getSpriteWidth(), monsterChara.getSpriteHeight());
+                    }
+//
         }
 
         for(Spell casted : castedSpell) {
