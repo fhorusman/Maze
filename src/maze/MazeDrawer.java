@@ -44,8 +44,8 @@ import util.NLog;
  */
 public class MazeDrawer {
     private final String KTag = "MazeDrawer";
-    private final int WIDTH = 640;
-    private final int HEIGHT = 480;
+    private final int WIDTH = 1600;
+    private final int HEIGHT = 960;
     private int FPS;
     private final int KEY_INPUT_PHASE = 1;
     private final int PC_MOVE_ACTION_PHASE = 2;
@@ -64,13 +64,14 @@ public class MazeDrawer {
     
     private Map<Integer, Tile> tiles; // floor tiles
     private Map<Integer, Float> rotations; // floor tiles directions
-    private final int mazeWidth = 15;       // max=20 with current screen width
-    private final int mazeHeight = 15;      // max 15 with current screen height
+    private final int mazeWidth = 50;       // max=20 with current screen width
+    private final int mazeHeight = 30;      // max 15 with current screen height
 //    private int x, y, targetX, targetY;
 //    private float movementX, movementY;
     private int elapsedTime = MazeConst.MOVEMENT_ANIMATION_DURATION;
     
     private boolean isPaused = false;
+    private boolean fog = true;
 
     public void start() throws LWJGLException {
         //1. Initialize Display
@@ -271,6 +272,8 @@ public class MazeDrawer {
     
     private final int spellCooldown = 128;
     private int currentCooldown = 128;
+    private final int hotkeyCooldown = 300;
+    private int currentHotKeyCooldown = 300;
     
     public void update(int delta) {
         if(Keyboard.isKeyDown(Keyboard.KEY_ESCAPE)) {
@@ -417,6 +420,14 @@ public class MazeDrawer {
                 currentPhase = KEY_INPUT_PHASE;
             } else {
                 currentPhase = KEY_INPUT_PHASE;
+            }
+        }
+        
+        currentHotKeyCooldown += delta;
+        if(currentHotKeyCooldown >= hotkeyCooldown) {
+            if(Keyboard.isKeyDown(Keyboard.KEY_M)) {
+                fog = !fog;
+                currentHotKeyCooldown = 0;
             }
         }
         
@@ -712,7 +723,7 @@ public class MazeDrawer {
         glBindTexture(GL_TEXTURE_2D, tileId);
         for(int y = 0; y < cf.getGrid().length; y++) {
             for(int x = 0; x < cf.getGrid()[y].length; x++) {
-                if((cf.getVisitedGrid()[y][x] & MazeConst.SEEN) != 0) {
+                if((cf.getVisitedGrid()[y][x] & MazeConst.SEEN) != 0 || !fog) {
                     drawTile(tiles.get(cf.getGrid()[y][x]), x * 32, y * 32, 0, 32, 32, rotations.get(cf.getGrid()[y][x]));
                 
                     if((cf.getEventGrid()[y][x] & MazeConst.TREASURE) != 0) {
@@ -740,8 +751,9 @@ public class MazeDrawer {
 //                            (monsterChara.isSpriteInTile(monsterChara.getTargetX(), monsterChara.getTargetY()) &&
 //                            (cf.getVisitedGrid()[monsterChara.getTargetY()][monsterChara.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN)) 
                         
-                            (cf.getVisitedGrid()[monsterChara.getY()][monsterChara.getX()] & MazeConst.SEEN) == MazeConst.SEEN ||
-                            (cf.getVisitedGrid()[monsterChara.getTargetY()][monsterChara.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN
+                            ((cf.getVisitedGrid()[monsterChara.getY()][monsterChara.getX()] & MazeConst.SEEN) == MazeConst.SEEN ||
+                            (cf.getVisitedGrid()[monsterChara.getTargetY()][monsterChara.getTargetX()] & MazeConst.SEEN) == MazeConst.SEEN)
+                            || !fog
                     ) {
                 drawTile(monsterChara.getFacingDirectionTile(-1), 
                         monsterChara.getCenteredMovementX(), monsterChara.getCenteredMovementY(), 
